@@ -20,7 +20,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SchedulerServiceImpl implements SchedulerService {
 
-    private final Scheduler scheduler;
+    private final Scheduler  scheduler;
 
     @Override
     public void schedule(ScheduleCreateRequest request) {
