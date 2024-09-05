@@ -1,13 +1,16 @@
 package co.instio.dto;
 
-import lombok.Getter;
-import lombok.Setter;
-
+import co.instio.enums.Status;
+import lombok.Data;
 import javax.validation.constraints.NotEmpty;
 
-@Getter
-@Setter
-public class ScheduleCreateRequest {
+
+@Data
+public class SchedulerCreateRequestDto {
+
+
+    private Long Id;
+
     @NotEmpty
     private String jobName;
 
@@ -16,4 +19,7 @@ public class ScheduleCreateRequest {
 
     @NotEmpty
     private String cronExpression;
+
+    private Status status;
+
 }

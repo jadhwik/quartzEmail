@@ -1,22 +1,24 @@
 package co.instio.service;
 
+import co.instio.dto.EmailDto;
+import co.instio.dto.ScheduleView;
+import co.instio.dto.SchedulerCreateRequestDto;
+import co.instio.entity.Email;
+import co.instio.entity.SchedulerDetails;
 import co.instio.enums.CommonErrorCodeEnum;
 import co.instio.exceptions.ServiceException;
 import co.instio.job.EmailJobHandler;
-import co.instio.dto.ScheduleCreateRequest;
 import co.instio.job.LogginJobHandler;
+import co.instio.mapper.ScheduleMapper;
+import co.instio.repo.EmailSchedulerRepo;
+import co.instio.repo.SchedulerRepo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.quartz.CronScheduleBuilder;
-import org.quartz.JobBuilder;
-import org.quartz.JobDataMap;
-import org.quartz.JobDetail;
-import org.quartz.Scheduler;
-import org.quartz.SchedulerException;
-import org.quartz.TriggerBuilder;
-import org.quartz.Trigger;
+import org.quartz.*;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -24,52 +26,60 @@ import java.util.UUID;
 @Slf4j
 public class SchedulerServiceImpl implements SchedulerService{
     private final Scheduler scheduler;
+    private final ScheduleMapper mapper;
+    private final EmailSchedulerRepo schedulerRepo;
+
 
     @Override
-    public void schedule(ScheduleCreateRequest request){
-        JobDetail jobDetail= jobBuilder(request.getJobName(), request.getJobType());
-        Trigger trigger=triggerBuilder(jobDetail,request.getCronExpression());
+    public ScheduleView schedule(EmailDto emailDto){
+        Email email = mapper.toEntity(emailDto);
+        schedulerRepo.save(email);
+
+
+        JobDetail jobDetail= emailJobBuilder(email.getEmail(),email.getSubject(), email.getBody());
+        Trigger trigger=triggerBuilder(jobDetail, email.getCronExpression());
+
         try{
-            scheduler.scheduleJob(jobDetail,  trigger);
+            scheduler.scheduleJob(jobDetail,trigger);
+
         }
         catch (SchedulerException se){
             throw new RuntimeException();
         }
+        return mapper.toView(emailDto);
     }
 
-    private JobDetail jobBuilder(String jobName,String jobType ){
-        JobDataMap jobDataMap= new JobDataMap();
-        jobDataMap.put("jobName",jobName);
-        jobDataMap.put("jobTYpe",jobType);
-        switch (jobType){
-            case "email":
-                return JobBuilder.newJob(EmailJobHandler.class)
-                        .withIdentity(UUID.randomUUID().toString(),"email-jobs")
-                        .withDescription("Create jobs for"+jobType)
-                        .storeDurably()
-                        .usingJobData(jobDataMap)
-                        .build();
 
-            case "logging":
-                return JobBuilder.newJob(LogginJobHandler.class)
-                        .withIdentity(UUID.randomUUID().toString(),"logging-jobs")
-                        .withDescription("Create jobs for"+jobType)
-                        .usingJobData(jobDataMap)
-                        .storeDurably()
-                        .build();
 
-            default:
-                throw new ServiceException(CommonErrorCodeEnum.BAD_REQUEST);
+    private JobDetail emailJobBuilder(String email, String subject, String body){
+        JobDataMap jobDataMap =new JobDataMap();
+        jobDataMap.put("to",email);
+        jobDataMap.put("subject",subject);
+        jobDataMap.put("body",body);
+        return JobBuilder.newJob(EmailJobHandler.class)
+                .withIdentity(UUID.randomUUID().toString(),"email-jobs")
+                .withDescription("Create jobs for email")
+                .storeDurably()
+                .usingJobData(jobDataMap)
+                .build();
+
 
         }
-    }
 
-    private Trigger triggerBuilder(JobDetail jobDetail, String cronExpression){
-        return  TriggerBuilder.newTrigger()
-                .forJob(jobDetail)
-                .withIdentity(jobDetail.getKey().getName(),"triggers")
-                .withDescription("Trigger for"+jobDetail.getKey().getName())
+
+
+
+    private Trigger triggerBuilder(JobDetail emailJobBuilder, String cronExpression){
+
+         return TriggerBuilder.newTrigger()
+                .forJob(emailJobBuilder)
+                .withIdentity(emailJobBuilder.getKey().getName(),"triggers")
+                .withDescription("Trigger for"+emailJobBuilder.getKey().getName())
                 .withSchedule(CronScheduleBuilder.cronSchedule(cronExpression).withMisfireHandlingInstructionDoNothing())
                 .build();
+
+
     }
+
+
 }
