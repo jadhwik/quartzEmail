@@ -8,7 +8,7 @@
 		<version>2.7.5</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.example</groupId>
+	<groupId>co.instio</groupId>
 	<artifactId>scheduler</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>scheduler</name>
@@ -62,7 +62,7 @@
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
-			<optional>true</optional>
+			<version>1.18.20</version> <!-- Added -->
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
